@@ -42,12 +42,12 @@ export default function CallList({ calls }: { calls: Call[] }) {
               </span>
             </div>
             <div className="mt-0.5 truncate text-sm text-ink-dim">
-              {c.summary || `${c.direction || "call"} · ${formatRelative(c.startedAt || c.createdAt)}`}
+              {c.summary || `${c.direction || "call"} · ${formatRelative(c.startedAt)}`}
             </div>
           </div>
           <div className="text-right">
             <div className="text-sm font-medium text-ink">{formatDuration(c.duration)}</div>
-            <div className="text-xs text-ink-mute">{formatRelative(c.startedAt || c.createdAt)}</div>
+            <div className="text-xs text-ink-mute">{formatRelative(c.startedAt)}</div>
           </div>
           <svg className="hidden h-4 w-4 text-ink-mute transition group-hover:translate-x-1 group-hover:text-accent-cyan md:block" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />

@@ -7,7 +7,7 @@ export default function StatsBar({ calls }: { calls: Call[] }) {
   const avgDuration = total > 0 ? Math.round(totalDuration / total) : 0;
   const today = new Date();
   const todayCalls = calls.filter((c) => {
-    const d = new Date(c.startedAt || c.createdAt || 0);
+    const d = new Date(c.startedAt || 0);
     return (
       d.getFullYear() === today.getFullYear() &&
       d.getMonth() === today.getMonth() &&

@@ -15,142 +15,113 @@ function authHeaders(): HeadersInit {
 
 export type Call = {
   id: string;
-  callId?: string;
-  from?: string;
-  to?: string;
-  direction?: string;
-  status?: string;
-  duration?: number;
-  startedAt?: string;
-  createdAt?: string;
-  endedAt?: string;
-  agentId?: string;
-  flowId?: string;
-  flowName?: string;
-  cost?: number;
-  summary?: string;
-  recordingUrl?: string;
-  transcript?: Array<{ role: string; text: string; at?: string }> | string;
-  variables?: Record<string, unknown>;
-  raw?: Record<string, unknown>;
+  callId: string;
+  from: string;
+  to: string;
+  direction: string;
+  status: string;
+  duration: number;
+  startedAt: string;
+  endedAt: string;
+  agentName: string;
+  flowName: string;
+  cost: number;
+  summary: string;
+  recordingUrl: string;
+  transcript?: Array<{ role: string; text: string; at?: string }>;
+  analyzed?: Record<string, unknown>;
 };
 
-function pickArray(json: unknown): unknown[] {
-  if (Array.isArray(json)) return json;
-  if (json && typeof json === "object") {
-    const o = json as Record<string, unknown>;
-    for (const k of ["calls", "data", "items", "results", "history", "callHistory"]) {
-      if (Array.isArray(o[k])) return o[k] as unknown[];
+/** RFC4180-ish CSV parser — handles quoted fields, escaped quotes, newlines inside fields. */
+function parseCsv(csv: string): Record<string, string>[] {
+  const rows: string[][] = [];
+  let cur: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  for (let i = 0; i < csv.length; i++) {
+    const c = csv[i];
+    if (inQuotes) {
+      if (c === '"' && csv[i + 1] === '"') {
+        field += '"';
+        i++;
+      } else if (c === '"') {
+        inQuotes = false;
+      } else {
+        field += c;
+      }
+    } else {
+      if (c === '"') {
+        inQuotes = true;
+      } else if (c === ",") {
+        cur.push(field);
+        field = "";
+      } else if (c === "\n") {
+        cur.push(field);
+        rows.push(cur);
+        cur = [];
+        field = "";
+      } else if (c === "\r") {
+        // skip
+      } else {
+        field += c;
+      }
     }
   }
-  return [];
+  if (field.length > 0 || cur.length > 0) {
+    cur.push(field);
+    rows.push(cur);
+  }
+  if (rows.length === 0) return [];
+  const headers = rows[0];
+  return rows
+    .slice(1)
+    .filter((r) => r.some((v) => v.length > 0))
+    .map((r) => {
+      const o: Record<string, string> = {};
+      headers.forEach((h, i) => {
+        o[h] = r[i] ?? "";
+      });
+      return o;
+    });
 }
 
-function normalizeCall(raw: Record<string, unknown>): Call {
-  const get = (k: string) => raw[k] as string | undefined;
+function rowToCall(r: Record<string, string>): Call {
+  let analyzed: Record<string, unknown> | undefined;
+  const raw = r["Analyzed Data (JSON)"];
+  if (raw) {
+    try {
+      analyzed = JSON.parse(raw);
+    } catch {
+      /* ignore */
+    }
+  }
+  const id = r["Call ID"] || r["Record ID"] || "";
   return {
-    id: (get("id") || get("callId") || get("_id") || "") as string,
-    callId: get("callId") || (get("id") as string),
-    from: get("from") || get("fromNumber") || get("caller"),
-    to: get("to") || get("toNumber") || get("callee"),
-    direction: get("direction"),
-    status: get("status"),
-    duration: typeof raw.duration === "number" ? raw.duration : Number(raw.duration) || 0,
-    startedAt: get("startedAt") || get("startTime") || get("createdAt"),
-    createdAt: get("createdAt"),
-    endedAt: get("endedAt") || get("endTime"),
-    agentId: get("agentId") || get("callAgentId"),
-    flowId: get("flowId") || get("pathwayId") || get("callFlowId"),
-    flowName: get("flowName") || get("pathway"),
-    cost: typeof raw.cost === "number" ? raw.cost : Number(raw.cost) || 0,
-    summary: get("summary") || get("postCallSummary"),
-    recordingUrl: get("recordingUrl") || get("recording_url") || get("audioUrl"),
-    transcript: (raw.transcript ?? raw.messages) as Call["transcript"],
-    variables: (raw.variables as Record<string, unknown>) ?? undefined,
-    raw,
+    id,
+    callId: r["Call ID"] || id,
+    from: r["From Phone Number"] || "",
+    to: r["To Phone Number"] || "",
+    direction: r["Direction"] || "",
+    status: r["Status"] || "",
+    duration: parseFloat(r["Duration (s)"]) || 0,
+    startedAt: r["Start Time (UTC)"] || "",
+    endedAt: r["End Time (UTC)"] || "",
+    agentName: r["Agent Name"] || "",
+    flowName: r["Call Flow Name"] || "",
+    cost: parseFloat(r["Cost"]) || 0,
+    summary: r["Summary"] || "",
+    recordingUrl: r["Recording Link"] || "",
+    analyzed,
   };
 }
 
-async function tryGet(url: string): Promise<Call[]> {
-  const res = await fetch(url, { headers: authHeaders(), cache: "no-store" });
-  if (res.status === 500) return []; // Trillet returns 500 on zero results
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Trillet ${res.status}: ${body.slice(0, 200)}`);
-  }
-  const json = await res.json();
-  const arr = pickArray(json);
-  return arr.map((r) => normalizeCall(r as Record<string, unknown>));
-}
+type ExportOpts = {
+  includeTranscripts?: boolean;
+  includePostAnalysis?: boolean;
+  limit?: number;
+};
 
-/**
- * Fetch call history filtered to a specific Trillet voice agent.
- * Tries multiple Trillet param shapes since their docs are inconsistent.
- */
-export async function listCallsForAgent(
-  agentId: string,
-  flowId?: string,
-  limit = 100,
-): Promise<Call[]> {
-  const attempts = [
-    `${BASE}/v1/api/call-history?agentId=${agentId}&limit=${limit}`,
-    `${BASE}/v1/api/call-history?callAgentId=${agentId}&limit=${limit}`,
-    flowId && `${BASE}/v1/api/call-history?flowId=${flowId}&limit=${limit}`,
-    flowId && `${BASE}/v1/api/call-history?pathwayId=${flowId}&limit=${limit}`,
-    `${BASE}/v1/api/call-history?limit=${limit}`,
-  ].filter(Boolean) as string[];
-
-  for (const url of attempts) {
-    try {
-      const calls = await tryGet(url);
-      // If the first call returned items, filter client-side as a safety net
-      if (calls.length > 0) {
-        const filtered = calls.filter(
-          (c) =>
-            c.agentId === agentId ||
-            c.flowId === flowId ||
-            (!c.agentId && !c.flowId), // unknown shape — keep
-        );
-        return filtered.length > 0 ? filtered : calls;
-      }
-    } catch (e) {
-      // try next param shape
-      console.warn("[trillet] attempt failed:", (e as Error).message);
-    }
-  }
-  return [];
-}
-
-export async function getCall(callId: string): Promise<Call | null> {
-  const url = `${BASE}/v1/api/call-history/${callId}`;
-  const res = await fetch(url, { headers: authHeaders(), cache: "no-store" });
-  if (!res.ok) return null;
-  const json = (await res.json()) as Record<string, unknown>;
-  const inner = (json.call || json.data || json) as Record<string, unknown>;
-  return normalizeCall(inner);
-}
-
-export async function getRecordingUrl(callId: string): Promise<string | null> {
-  const url = `${BASE}/v1/api/recordings/${callId}`;
-  const res = await fetch(url, { headers: authHeaders(), cache: "no-store" });
-  if (!res.ok) return null;
-  const json = (await res.json()) as Record<string, unknown>;
-  return (
-    (json.recordingUrl as string) ||
-    (json.url as string) ||
-    (json.audioUrl as string) ||
-    null
-  );
-}
-
-export async function exportCallHistoryCsv(
-  agentId: string,
-  opts: {
-    includeTranscripts?: boolean;
-    includePostAnalysis?: boolean;
-    limit?: number;
-  } = {},
-): Promise<{ csv: string; filename: string } | null> {
+async function fetchExportCsv(agentId: string, opts: ExportOpts = {}): Promise<string> {
   const url = `${BASE}/v2/api/call-history/export-csv`;
   const body = {
     agentId,
@@ -164,9 +135,81 @@ export async function exportCallHistoryCsv(
     body: JSON.stringify(body),
     cache: "no-store",
   });
-  if (!res.ok) return null;
-  const csv = await res.text();
-  const cd = res.headers.get("content-disposition") || "";
-  const m = cd.match(/filename="?([^";]+)"?/i);
-  return { csv, filename: m?.[1] || `call-history-${Date.now()}.csv` };
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Trillet ${res.status}: ${text.slice(0, 200)}`);
+  }
+  return res.text();
+}
+
+/** List calls for a specific Trillet voice agent. Sorted newest → oldest. */
+export async function listCallsForAgent(
+  agentId: string,
+  _flowId?: string,
+  limit = 200,
+): Promise<Call[]> {
+  const csv = await fetchExportCsv(agentId, { limit });
+  const rows = parseCsv(csv);
+  const calls = rows.map(rowToCall);
+  calls.sort((a, b) => {
+    const da = new Date(a.startedAt).getTime() || 0;
+    const db = new Date(b.startedAt).getTime() || 0;
+    return db - da;
+  });
+  return calls;
+}
+
+/** Fetch a single call with transcript + post-analysis included. */
+export async function getCall(agentId: string, callId: string): Promise<Call | null> {
+  const csv = await fetchExportCsv(agentId, {
+    includeTranscripts: true,
+    includePostAnalysis: true,
+  });
+  const rows = parseCsv(csv);
+  const row = rows.find((r) => r["Call ID"] === callId || r["Record ID"] === callId);
+  if (!row) return null;
+  const call = rowToCall(row);
+
+  const transcriptRaw = row["Transcript"] || row["Transcripts"] || "";
+  if (transcriptRaw) {
+    call.transcript = parseTranscript(transcriptRaw);
+  }
+  return call;
+}
+
+/** Attempt to parse Trillet's transcript column into role/text pairs. */
+function parseTranscript(raw: string): Array<{ role: string; text: string }> {
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+  // Try JSON first
+  if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((m: Record<string, unknown>) => ({
+            role: String(m.role || m.speaker || m.from || "?"),
+            text: String(m.text || m.content || m.message || ""),
+          }))
+          .filter((m) => m.text);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  // Plain text — split on newlines, try to detect "Speaker: text" format
+  const lines = trimmed.split("\n").filter(Boolean);
+  return lines.map((line) => {
+    const m = line.match(/^([A-Za-z][A-Za-z0-9 _-]*?):\s*(.+)$/);
+    if (m) return { role: m[1].trim(), text: m[2].trim() };
+    return { role: "speaker", text: line.trim() };
+  });
+}
+
+export async function exportCallHistoryCsv(
+  agentId: string,
+  opts: ExportOpts = {},
+): Promise<{ csv: string; filename: string }> {
+  const csv = await fetchExportCsv(agentId, opts);
+  return { csv, filename: `call-history-${Date.now()}.csv` };
 }

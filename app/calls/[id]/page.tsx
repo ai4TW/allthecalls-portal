@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { getCall, getRecordingUrl } from "@/lib/trillet";
+import { getCall } from "@/lib/trillet";
 import Nav from "@/components/Nav";
 import { formatDateTime, formatDuration, formatPhone, statusColor } from "@/lib/format";
 
@@ -17,23 +17,8 @@ export default async function CallDetailPage({
   if (!session) redirect("/login");
 
   const { id } = await params;
-  const call = await getCall(id);
+  const call = await getCall(session.agentId, id);
   if (!call) notFound();
-
-  const recording = call.recordingUrl || (await getRecordingUrl(id));
-
-  let transcriptLines: Array<{ role: string; text: string }> = [];
-  if (Array.isArray(call.transcript)) {
-    transcriptLines = call.transcript.map((t) => ({
-      role: t.role || "?",
-      text: t.text || "",
-    }));
-  } else if (typeof call.transcript === "string" && call.transcript.length > 0) {
-    transcriptLines = call.transcript
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => ({ role: "transcript", text: line }));
-  }
 
   return (
     <>
@@ -47,7 +32,7 @@ export default async function CallDetailPage({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider text-ink-mute">
-                {call.direction || "call"} · {formatDateTime(call.startedAt || call.createdAt)}
+                {call.direction || "call"} · {formatDateTime(call.startedAt)}
               </div>
               <h1 className="mt-1 font-display text-2xl font-semibold text-ink">
                 {formatPhone(call.from)}
@@ -62,15 +47,15 @@ export default async function CallDetailPage({
           <div className="mt-6 grid grid-cols-3 gap-3">
             <Stat label="Duration" value={formatDuration(call.duration)} />
             <Stat label="Cost" value={call.cost ? `$${call.cost.toFixed(2)}` : "—"} />
-            <Stat label="Agent" value={call.flowName || "Gia"} />
+            <Stat label="Agent" value={call.agentName || call.flowName || "—"} />
           </div>
 
-          {recording && (
+          {call.recordingUrl && (
             <div className="mt-6">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-dim">
                 Recording
               </div>
-              <audio controls src={recording} className="w-full">
+              <audio controls src={call.recordingUrl} className="w-full">
                 Your browser does not support audio playback.
               </audio>
             </div>
@@ -87,13 +72,13 @@ export default async function CallDetailPage({
             </div>
           )}
 
-          {transcriptLines.length > 0 && (
+          {call.transcript && call.transcript.length > 0 && (
             <div className="mt-6">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-dim">
                 Transcript
               </div>
               <div className="space-y-3 rounded-xl border border-bg-edge bg-bg-panel/60 p-4">
-                {transcriptLines.map((line, i) => {
+                {call.transcript.map((line, i) => {
                   const isAgent = /agent|assistant|ai|gia/i.test(line.role);
                   return (
                     <div key={i} className={`flex ${isAgent ? "justify-start" : "justify-end"}`}>
@@ -113,6 +98,19 @@ export default async function CallDetailPage({
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {!call.transcript?.length && call.analyzed && (
+            <div className="mt-6">
+              <details className="rounded-xl border border-bg-edge bg-bg-panel/60 p-4">
+                <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider text-ink-dim">
+                  Post-call analysis
+                </summary>
+                <pre className="mt-3 overflow-x-auto text-xs text-ink-dim">
+                  {JSON.stringify(call.analyzed, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </div>

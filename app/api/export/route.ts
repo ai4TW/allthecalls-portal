@@ -10,12 +10,17 @@ export async function GET(req: Request) {
   const includeTranscripts = url.searchParams.get("transcripts") === "1";
   const includePostAnalysis = url.searchParams.get("analysis") === "1";
 
-  const result = await exportCallHistoryCsv(session.agentId, {
-    includeTranscripts,
-    includePostAnalysis,
-  });
-  if (!result) {
-    return NextResponse.json({ error: "Export failed" }, { status: 502 });
+  let result;
+  try {
+    result = await exportCallHistoryCsv(session.agentId, {
+      includeTranscripts,
+      includePostAnalysis,
+    });
+  } catch (e) {
+    return NextResponse.json(
+      { error: "Export failed", detail: (e as Error).message },
+      { status: 502 },
+    );
   }
 
   return new NextResponse(result.csv, {
