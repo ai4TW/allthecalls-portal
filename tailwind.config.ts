@@ -16,14 +16,23 @@ export default {
           dim: "#9aa0b8",
           mute: "#5d6378",
         },
+        // Exact AllTheCalls.ai brand colors
         accent: {
-          violet: "#8b5cf6",
-          cyan: "#22d3ee",
+          cyan: "#4cd7f6",
+          cyanDeep: "#06b6d4",
+          violet: "#7c3aed",
+          violetSoft: "#a78bfa",
+          violetLight: "#c4b5fd",
+          violetMist: "#d2bbff",
         },
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
-        display: ["var(--font-inter)", "system-ui", "sans-serif"],
+        sans: ["var(--font-space-grotesk)", "system-ui", "sans-serif"],
+        display: ["var(--font-space-grotesk)", "system-ui", "sans-serif"],
+      },
+      backgroundImage: {
+        "atc-gradient":
+          "linear-gradient(135deg, #4cd7f6 0%, #7c3aed 55%, #c4b5fd 100%)",
       },
     },
   },

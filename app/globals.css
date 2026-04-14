@@ -6,19 +6,24 @@ html { scroll-behavior: smooth; }
 body {
   @apply bg-bg-base text-ink antialiased;
   background-image:
-    radial-gradient(circle at 15% -10%, rgba(139,92,246,0.18) 0%, transparent 45%),
-    radial-gradient(circle at 100% 110%, rgba(34,211,238,0.12) 0%, transparent 50%);
+    radial-gradient(circle at 15% -10%, rgba(124,58,237,0.22) 0%, transparent 45%),
+    radial-gradient(circle at 100% 110%, rgba(76,215,246,0.14) 0%, transparent 50%);
   background-attachment: fixed;
 }
 
 .gradient-text {
-  @apply bg-gradient-to-r from-accent-violet to-accent-cyan bg-clip-text text-transparent;
+  background: linear-gradient(135deg, #4cd7f6 0%, #a78bfa 50%, #d2bbff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 .btn-primary {
-  @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-accent-violet to-accent-cyan px-6 py-3 font-semibold text-white shadow-lg shadow-accent-violet/20 transition hover:opacity-90 active:scale-[0.98];
+  @apply inline-flex items-center justify-center rounded-xl px-6 py-3 font-semibold text-white shadow-lg transition hover:opacity-90 active:scale-[0.98];
+  background: linear-gradient(135deg, #4cd7f6 0%, #7c3aed 55%, #c4b5fd 100%);
+  box-shadow: 0 10px 30px -10px rgba(124, 58, 237, 0.5);
 }
 .btn-ghost {
-  @apply inline-flex items-center justify-center rounded-xl border border-bg-edge px-4 py-2 text-sm font-medium text-ink-dim transition hover:border-accent-violet/50 hover:text-ink;
+  @apply inline-flex items-center justify-center rounded-xl border border-bg-edge px-4 py-2 text-sm font-medium text-ink-dim transition hover:border-accent-violet/60 hover:text-ink;
 }
 .card {
   @apply rounded-2xl border border-bg-edge bg-bg-card/60 backdrop-blur;

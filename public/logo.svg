@@ -1,0 +1,25 @@
+<svg viewBox="0 0 300 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="lg-icon" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="50%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#c4b5fd"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon mark — gradient on shapes works reliably everywhere -->
+  <g transform="translate(4, 8) scale(0.58)">
+    <rect x="44" y="38" width="12" height="42" rx="6" fill="url(#lg-icon)"/>
+    <path d="M25 30H70C75.5228 30 80 34.4772 80 40V45C80 48.3137 77.3137 51 74 51H70C66.6863 51 64 48.3137 64 45V42H25C21.6863 42 19 39.3137 19 36V36C19 32.6863 21.6863 30 25 30Z" fill="url(#lg-icon)"/>
+    <rect x="32" y="55" width="6" height="15" rx="3" fill="url(#lg-icon)"/>
+    <rect x="22" y="60" width="6" height="8" rx="3" fill="url(#lg-icon)"/>
+    <rect x="62" y="52" width="6" height="22" rx="3" fill="url(#lg-icon)"/>
+    <rect x="72" y="58" width="6" height="12" rx="3" fill="url(#lg-icon)"/>
+    <rect x="82" y="62" width="6" height="6" rx="3" fill="url(#lg-icon)"/>
+  </g>
+
+  <!-- Wordmark: white "allthecalls" + violet ".ai" — solid fills are bulletproof on iOS -->
+  <text x="68" y="47" font-size="28" font-weight="700" font-family="Space Grotesk, sans-serif">
+    <tspan fill="#ffffff">allthecalls</tspan><tspan fill="#a78bfa">.ai</tspan>
+  </text>
+</svg>
