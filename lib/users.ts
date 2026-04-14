@@ -1,72 +1,98 @@
+import crypto from "node:crypto";
+import { getSupabaseAdmin, type PortalUserRow } from "./supabase";
+
 export type PortalUser = {
+  id: string;
   email: string;
-  password: string;
+  name: string;
   agentId: string;
   flowId: string;
-  name: string;
+  accessToken: string;
 };
 
-/**
- * Load the portal user directory.
- *
- * Source of truth is the `USERS_JSON` env var — a JSON array of user objects.
- * Falls back to the legacy `DEMO_*` env vars so older deployments keep working.
- *
- * Example USERS_JSON:
- * [
- *   {"email":"brayden@allthecalls.ai","password":"xxx","agentId":"...","flowId":"...","name":"Gia · AllTheCalls"},
- *   {"email":"brayden@nextlevelacq.com","password":"yyy","agentId":"...","flowId":"...","name":"Gia · Next Level ACQ"}
- * ]
- */
-export function loadUsers(): PortalUser[] {
-  const raw = process.env.USERS_JSON;
-  if (raw) {
-    try {
-      const arr = JSON.parse(raw);
-      if (Array.isArray(arr)) {
-        return arr
-          .filter(
-            (u): u is PortalUser =>
-              u &&
-              typeof u.email === "string" &&
-              typeof u.password === "string" &&
-              typeof u.agentId === "string",
-          )
-          .map((u) => ({
-            email: u.email.trim().toLowerCase(),
-            password: u.password,
-            agentId: u.agentId,
-            flowId: u.flowId || "",
-            name: u.name || u.email,
-          }));
-      }
-    } catch (e) {
-      console.error("[users] Failed to parse USERS_JSON:", (e as Error).message);
-    }
-  }
-
-  // Legacy fallback — single DEMO_* user
-  const email = process.env.DEMO_EMAIL?.trim().toLowerCase();
-  const password = process.env.DEMO_PASSWORD;
-  const agentId = process.env.DEMO_AGENT_ID;
-  if (email && password && agentId) {
-    return [
-      {
-        email,
-        password,
-        agentId,
-        flowId: process.env.DEMO_FLOW_ID || "",
-        name: process.env.DEMO_CLIENT_NAME || email,
-      },
-    ];
-  }
-
-  return [];
+function toUser(row: PortalUserRow): PortalUser {
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    agentId: row.agent_id,
+    flowId: row.flow_id || "",
+    accessToken: row.access_token,
+  };
 }
 
-export function findUser(email: string, password: string): PortalUser | null {
-  const target = email.trim().toLowerCase();
-  const users = loadUsers();
-  const match = users.find((u) => u.email === target && u.password === password);
-  return match || null;
+export async function listUsers(): Promise<PortalUser[]> {
+  const supa = getSupabaseAdmin();
+  const { data, error } = await supa
+    .from("portal_users")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`Supabase list users: ${error.message}`);
+  return (data as PortalUserRow[]).map(toUser);
+}
+
+export async function findUserByToken(token: string): Promise<PortalUser | null> {
+  if (!token) return null;
+  const supa = getSupabaseAdmin();
+  const { data } = await supa
+    .from("portal_users")
+    .select("*")
+    .eq("access_token", token)
+    .maybeSingle();
+  if (!data) return null;
+  // Touch last_login_at (fire-and-forget)
+  supa
+    .from("portal_users")
+    .update({ last_login_at: new Date().toISOString() })
+    .eq("id", data.id)
+    .then(() => {});
+  return toUser(data as PortalUserRow);
+}
+
+export async function createUser(input: {
+  email: string;
+  name: string;
+  agentId: string;
+  flowId?: string;
+}): Promise<PortalUser> {
+  const token = crypto.randomBytes(24).toString("base64url");
+  const supa = getSupabaseAdmin();
+  const { data, error } = await supa
+    .from("portal_users")
+    .insert({
+      email: input.email.trim().toLowerCase(),
+      name: input.name.trim(),
+      agent_id: input.agentId,
+      flow_id: input.flowId || null,
+      access_token: token,
+    })
+    .select("*")
+    .single();
+  if (error) throw new Error(`Supabase create user: ${error.message}`);
+  return toUser(data as PortalUserRow);
+}
+
+export async function deleteUser(id: string): Promise<void> {
+  const supa = getSupabaseAdmin();
+  const { error } = await supa.from("portal_users").delete().eq("id", id);
+  if (error) throw new Error(`Supabase delete user: ${error.message}`);
+}
+
+export async function markEmailSent(id: string): Promise<void> {
+  const supa = getSupabaseAdmin();
+  await supa
+    .from("portal_users")
+    .update({ email_sent_at: new Date().toISOString() })
+    .eq("id", id);
+}
+
+export async function getUserById(id: string): Promise<PortalUser | null> {
+  const supa = getSupabaseAdmin();
+  const { data } = await supa
+    .from("portal_users")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (!data) return null;
+  return toUser(data as PortalUserRow);
 }
