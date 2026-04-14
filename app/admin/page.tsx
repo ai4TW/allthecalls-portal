@@ -11,6 +11,7 @@ type SearchParams = Promise<{
   created?: string;
   deleted?: string;
   sent?: string;
+  duplicate?: string;
 }>;
 
 export default async function AdminPage({
@@ -241,12 +242,20 @@ export default async function AdminPage({
 function FlashBanner({
   sp,
 }: {
-  sp: { error?: string; created?: string; deleted?: string; sent?: string };
+  sp: { error?: string; created?: string; deleted?: string; sent?: string; duplicate?: string };
 }) {
   if (sp.created) {
     return (
       <div className="mb-6 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-300">
         ✅ Login created. Copy the access URL or click &ldquo;Send welcome email&rdquo;.
+      </div>
+    );
+  }
+  if (sp.duplicate) {
+    return (
+      <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-300">
+        This client already has a login for that agent. Scroll down to their row in{" "}
+        <strong>Active logins</strong> and click <strong>Send welcome email</strong>.
       </div>
     );
   }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/session";
-import { createUser } from "@/lib/users";
+import { createUser, DuplicateUserError } from "@/lib/users";
 
 export async function POST(req: Request) {
   const session = await getAdminSession();
@@ -19,6 +19,9 @@ export async function POST(req: Request) {
   try {
     await createUser({ email, name, agentId, flowId });
   } catch (e) {
+    if (e instanceof DuplicateUserError) {
+      return NextResponse.redirect(new URL("/admin?duplicate=1", req.url), 303);
+    }
     const msg = encodeURIComponent((e as Error).message);
     return NextResponse.redirect(new URL(`/admin?error=${msg}`, req.url), 303);
   }

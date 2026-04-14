@@ -49,6 +49,13 @@ export async function findUserByToken(token: string): Promise<PortalUser | null>
   return toUser(data as PortalUserRow);
 }
 
+export class DuplicateUserError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DuplicateUserError";
+  }
+}
+
 export async function createUser(input: {
   email: string;
   name: string;
@@ -68,7 +75,14 @@ export async function createUser(input: {
     })
     .select("*")
     .single();
-  if (error) throw new Error(`Supabase create user: ${error.message}`);
+  if (error) {
+    if (error.code === "23505") {
+      throw new DuplicateUserError(
+        "That client already has a login for this agent. Scroll down to their row and click Send welcome email.",
+      );
+    }
+    throw new Error(`Supabase create user: ${error.message}`);
+  }
   return toUser(data as PortalUserRow);
 }
 
