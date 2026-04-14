@@ -41,16 +41,32 @@ function renderWelcomeText(input: WelcomeInput): string {
   return [
     `Hey ${firstName(input.name)},`,
     ``,
-    `Your AllTheCalls mission control is live. You can see every call your AI receptionist handles — call history, recordings, transcripts, and summaries — all in one place.`,
+    `Your AllTheCalls mission control is live. You can see every call your AI receptionist handles — call history, recordings, transcripts, and summaries — all in one place, on any device.`,
     ``,
-    `Open your portal:`,
+    `Step 1 — Open your portal:`,
     input.accessUrl,
     ``,
-    `👉 To install it to your phone's home screen:`,
-    `  • iPhone: Open the link in Safari → tap the Share button → Add to Home Screen`,
-    `  • Android: Open the link in Chrome → tap the ⋮ menu → Install app`,
+    `This is your personal login link. Bookmark it — tapping it keeps you signed in for 30 days.`,
     ``,
-    `You'll stay logged in for 30 days. If you ever get logged out, just tap the link again.`,
+    `Step 2 — Install it on your phone (recommended, 15 seconds):`,
+    ``,
+    `📱 iPhone / iPad`,
+    `  1. IMPORTANT: open the link in Safari (not Chrome or Gmail's in-app browser — it has to be Safari)`,
+    `  2. Tap the Share button at the bottom of Safari (the square with the arrow pointing up)`,
+    `  3. Scroll down and tap "Add to Home Screen"`,
+    `  4. Tap "Add" in the top-right corner`,
+    `  5. You'll see the AllTheCalls icon on your home screen — tap it like any app`,
+    ``,
+    `🤖 Android`,
+    `  1. Open the link in Chrome`,
+    `  2. Tap the three-dot menu (⋮) in the top-right`,
+    `  3. Tap "Install app" or "Add to Home Screen"`,
+    `  4. Tap "Install"`,
+    ``,
+    `Already installed before but see the wrong icon?`,
+    `  Delete the old icon from your home screen first (long-press → Remove), then follow the steps above. iPhone caches icons and only refreshes on re-install.`,
+    ``,
+    `Need help? Reply to this email and we'll walk you through it.`,
     ``,
     `— The AllTheCalls team`,
   ].join("\n");
@@ -94,21 +110,69 @@ function renderWelcome(input: WelcomeInput): string {
             </td>
           </tr>
           <tr>
-            <td style="padding:0 32px 24px;">
+            <td style="padding:0 32px 8px;">
               <div style="border-top:1px solid #1f2233;padding-top:24px;">
-                <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#a78bfa;margin-bottom:8px;">
-                  Install to your home screen
+                <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#a78bfa;margin-bottom:6px;">
+                  Step 2 · Install to your home screen
                 </div>
-                <p style="margin:0 0 10px;font-size:14px;color:#9aa0b8;">
-                  <strong style="color:#e8eaf2;">iPhone:</strong> Open the link in Safari → tap Share → Add to Home Screen
-                </p>
-                <p style="margin:0 0 16px;font-size:14px;color:#9aa0b8;">
-                  <strong style="color:#e8eaf2;">Android:</strong> Open the link in Chrome → tap ⋮ → Install app
-                </p>
-                <p style="margin:0;font-size:12px;color:#5d6378;">
-                  You'll stay logged in for 30 days. If you get logged out, just tap this email's button again.
+                <p style="margin:0 0 20px;font-size:14px;color:#9aa0b8;line-height:1.5;">
+                  This makes the portal feel like a native app — no browser bar, just tap the icon and you're in.
                 </p>
               </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px 16px;">
+              <div style="border:1px solid #1f2233;border-radius:14px;padding:20px;background:#141725;">
+                <div style="font-size:13px;font-weight:700;color:#ffffff;margin-bottom:10px;">
+                  📱 iPhone / iPad
+                </div>
+                <ol style="margin:0 0 8px 0;padding-left:20px;font-size:13px;color:#9aa0b8;line-height:1.7;">
+                  <li><strong style="color:#e8eaf2;">Must be Safari</strong> — not Chrome, not Gmail's in-app browser. Open this email in Safari, or copy the link and paste it into Safari.</li>
+                  <li>Tap the <strong style="color:#e8eaf2;">Share button</strong> at the bottom of Safari (square with an up arrow).</li>
+                  <li>Scroll down and tap <strong style="color:#e8eaf2;">&ldquo;Add to Home Screen&rdquo;</strong>.</li>
+                  <li>Tap <strong style="color:#e8eaf2;">&ldquo;Add&rdquo;</strong> in the top-right. Done.</li>
+                </ol>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px 16px;">
+              <div style="border:1px solid #1f2233;border-radius:14px;padding:20px;background:#141725;">
+                <div style="font-size:13px;font-weight:700;color:#ffffff;margin-bottom:10px;">
+                  🤖 Android
+                </div>
+                <ol style="margin:0;padding-left:20px;font-size:13px;color:#9aa0b8;line-height:1.7;">
+                  <li>Open this link in <strong style="color:#e8eaf2;">Chrome</strong>.</li>
+                  <li>Tap the <strong style="color:#e8eaf2;">three-dot menu</strong> (⋮) top-right.</li>
+                  <li>Tap <strong style="color:#e8eaf2;">&ldquo;Install app&rdquo;</strong> or &ldquo;Add to Home Screen&rdquo;.</li>
+                  <li>Tap <strong style="color:#e8eaf2;">&ldquo;Install&rdquo;</strong>. Done.</li>
+                </ol>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px 24px;">
+              <div style="border:1px solid rgba(234,179,8,0.25);border-radius:14px;padding:16px 18px;background:rgba(234,179,8,0.06);">
+                <div style="font-size:12px;font-weight:700;color:#facc15;margin-bottom:6px;">
+                  ⚠️ Already installed before?
+                </div>
+                <div style="font-size:13px;color:#9aa0b8;line-height:1.5;">
+                  If you see an old icon on your home screen, delete it first (long-press → Remove), then re-add. iPhone caches icons aggressively and only refreshes when you re-install.
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px 24px;">
+              <p style="margin:0;font-size:12px;color:#5d6378;line-height:1.6;">
+                Need help? Reply to this email and we&rsquo;ll walk you through it.
+                You&rsquo;ll stay signed in for 30 days — if you ever get logged out, just tap the button above again.
+              </p>
             </td>
           </tr>
         </table>
