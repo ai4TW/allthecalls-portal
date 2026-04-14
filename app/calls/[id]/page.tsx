@@ -50,12 +50,17 @@ export default async function CallDetailPage({
             <Stat label="Agent" value={call.agentName || call.flowName || "—"} />
           </div>
 
-          {call.recordingUrl && (
+          {call.recordId && (
             <div className="mt-6">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-dim">
                 Recording
               </div>
-              <audio controls src={call.recordingUrl} className="w-full">
+              <audio
+                controls
+                preload="none"
+                src={`/api/recording/${encodeURIComponent(call.recordId)}`}
+                className="w-full"
+              >
                 Your browser does not support audio playback.
               </audio>
             </div>

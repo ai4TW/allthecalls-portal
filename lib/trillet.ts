@@ -16,6 +16,7 @@ function authHeaders(): HeadersInit {
 export type Call = {
   id: string;
   callId: string;
+  recordId: string;
   from: string;
   to: string;
   direction: string;
@@ -99,6 +100,7 @@ function rowToCall(r: Record<string, string>): Call {
   return {
     id,
     callId: r["Call ID"] || id,
+    recordId: r["Record ID"] || "",
     from: r["From Phone Number"] || "",
     to: r["To Phone Number"] || "",
     direction: r["Direction"] || "",
@@ -212,4 +214,24 @@ export async function exportCallHistoryCsv(
 ): Promise<{ csv: string; filename: string }> {
   const csv = await fetchExportCsv(agentId, opts);
   return { csv, filename: `call-history-${Date.now()}.csv` };
+}
+
+/** Stream a call recording from Trillet by record ID. */
+export async function fetchRecording(recordId: string): Promise<Response> {
+  const url = `${BASE}/v2/api/recordings/${encodeURIComponent(recordId)}`;
+  return fetch(url, { headers: authHeaders(), cache: "no-store" });
+}
+
+/** Verify a recordId belongs to the given agent. Prevents cross-tenant access. */
+export async function recordIdBelongsToAgent(
+  agentId: string,
+  recordId: string,
+): Promise<boolean> {
+  try {
+    const csv = await fetchExportCsv(agentId, { limit: 500 });
+    const rows = parseCsv(csv);
+    return rows.some((r) => r["Record ID"] === recordId);
+  } catch {
+    return false;
+  }
 }
