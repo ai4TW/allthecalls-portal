@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import Logo from "@/components/Logo";
 import { listUsers, type PortalUser } from "@/lib/users";
 import { listFlows, type TrilletFlow } from "@/lib/trillet-admin";
+import { listRecentLeads, countLeadsSince, type VideoLead } from "@/lib/leads";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -27,9 +28,21 @@ export default async function AdminPage({
 
   let users: PortalUser[] = [];
   let flows: TrilletFlow[] = [];
+  let leads: VideoLead[] = [];
+  let leads24h = 0;
+  let leads7d = 0;
   let loadError: string | null = null;
+  const now = Date.now();
+  const since24h = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+  const since7d = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
   try {
-    [users, flows] = await Promise.all([listUsers(), listFlows()]);
+    [users, flows, leads, leads24h, leads7d] = await Promise.all([
+      listUsers(),
+      listFlows(),
+      listRecentLeads(50),
+      countLeadsSince(since24h),
+      countLeadsSince(since7d),
+    ]);
   } catch (e) {
     loadError = (e as Error).message;
   }
@@ -232,11 +245,124 @@ export default async function AdminPage({
         )}
       </section>
 
+      {/* VIDEO LEADS — captured from /pricing VSL gate */}
+      <section className="mt-8 card overflow-hidden">
+        <div className="flex items-center justify-between border-b border-bg-edge px-6 py-4">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-ink">
+              Video leads
+            </h2>
+            <div className="mt-1 text-xs text-ink-mute">
+              Captured before watching the pricing-page VSL
+            </div>
+          </div>
+          <div className="flex gap-3 text-right">
+            <div>
+              <div className="font-display text-2xl font-semibold gradient-text">
+                {leads24h}
+              </div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-ink-mute">
+                last 24h
+              </div>
+            </div>
+            <div>
+              <div className="font-display text-2xl font-semibold gradient-text">
+                {leads7d}
+              </div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-ink-mute">
+                last 7d
+              </div>
+            </div>
+            <div>
+              <div className="font-display text-2xl font-semibold text-ink">
+                {leads.length}
+              </div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-ink-mute">
+                shown
+              </div>
+            </div>
+          </div>
+        </div>
+        {leads.length === 0 ? (
+          <div className="p-10 text-center text-sm text-ink-dim">
+            No leads yet. They&apos;ll appear here as people fill out the form on{" "}
+            <a
+              href="https://allthecalls.ai/pricing"
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent-cyan hover:underline"
+            >
+              allthecalls.ai/pricing
+            </a>
+            .
+          </div>
+        ) : (
+          <div className="divide-y divide-bg-edge">
+            {leads.map((l) => (
+              <div
+                key={l.id}
+                className="flex flex-wrap items-start justify-between gap-3 px-6 py-4"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-ink">
+                      {l.firstName || "—"}
+                    </span>
+                    <a
+                      href={`mailto:${l.email}`}
+                      className="text-sm text-accent-cyan hover:underline"
+                    >
+                      {l.email}
+                    </a>
+                    {l.phone && (
+                      <a
+                        href={`tel:${l.phone.replace(/[^\d+]/g, "")}`}
+                        className="text-sm text-ink-dim hover:text-accent-cyan"
+                      >
+                        · {l.phone}
+                      </a>
+                    )}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-mute">
+                    {l.businessType && (
+                      <span className="rounded-full border border-bg-edge px-2 py-0.5">
+                        {l.businessType}
+                      </span>
+                    )}
+                    {l.source && (
+                      <span className="rounded-full border border-bg-edge px-2 py-0.5">
+                        {l.source}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right text-xs text-ink-mute">
+                  {formatLeadTime(l.createdAt)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       <p className="mt-8 text-center text-xs text-ink-mute">
         Deleting a login revokes their access immediately.
       </p>
     </main>
   );
+}
+
+function formatLeadTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const diffMin = Math.floor((Date.now() - d.getTime()) / 60_000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const hr = Math.floor(diffMin / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day}d ago`;
+  return d.toLocaleDateString();
 }
 
 function FlashBanner({
