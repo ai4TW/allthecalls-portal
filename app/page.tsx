@@ -5,6 +5,7 @@ import { listCallsForAgent } from "@/lib/trillet";
 import Nav from "@/components/Nav";
 import StatsBar from "@/components/StatsBar";
 import CallList from "@/components/CallList";
+import AutoRefresh from "@/components/AutoRefresh";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -47,7 +48,10 @@ export default async function HomePage() {
         <StatsBar calls={calls} />
 
         <div className="mt-8 mb-3 flex items-center justify-between">
-          <h2 className="font-semibold text-ink">Recent calls</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="font-semibold text-ink">Recent calls</h2>
+            <AutoRefresh intervalMs={8000} />
+          </div>
           <Link href="/calls" className="text-sm font-medium text-accent-cyan hover:underline">
             View all →
           </Link>

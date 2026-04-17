@@ -1,4 +1,12 @@
+import { unstable_cache } from "next/cache";
+
 const BASE = "https://api.trillet.ai";
+
+// How long to cache Trillet CSV exports. Short TTL = near-real-time while still
+// preventing multiple concurrent polls (from multiple tabs or a refresh storm)
+// from hammering Trillet's slow CSV-export endpoint.
+const LIST_CACHE_SECONDS = 5;
+const DETAIL_CACHE_SECONDS = 3;
 
 function authHeaders(): HeadersInit {
   const apiKey = process.env.TRILLET_API_KEY;
@@ -144,12 +152,7 @@ async function fetchExportCsv(agentId: string, opts: ExportOpts = {}): Promise<s
   return res.text();
 }
 
-/** List calls for a specific Trillet voice agent. Sorted newest → oldest. */
-export async function listCallsForAgent(
-  agentId: string,
-  _flowId?: string,
-  limit = 200,
-): Promise<Call[]> {
+async function listCallsForAgentUncached(agentId: string, limit: number): Promise<Call[]> {
   const csv = await fetchExportCsv(agentId, { limit });
   const rows = parseCsv(csv);
   const calls = rows.map(rowToCall);
@@ -161,8 +164,24 @@ export async function listCallsForAgent(
   return calls;
 }
 
-/** Fetch a single call with transcript + post-analysis included. */
-export async function getCall(agentId: string, callId: string): Promise<Call | null> {
+/**
+ * List calls for a specific Trillet voice agent. Sorted newest → oldest.
+ * Cached for LIST_CACHE_SECONDS to dedupe concurrent polls.
+ */
+export async function listCallsForAgent(
+  agentId: string,
+  _flowId?: string,
+  limit = 200,
+): Promise<Call[]> {
+  const cached = unstable_cache(
+    async () => listCallsForAgentUncached(agentId, limit),
+    ["trillet-calls-list", agentId, String(limit)],
+    { revalidate: LIST_CACHE_SECONDS, tags: ["trillet-calls", `trillet-calls-${agentId}`] },
+  );
+  return cached();
+}
+
+async function getCallUncached(agentId: string, callId: string): Promise<Call | null> {
   const csv = await fetchExportCsv(agentId, {
     includeTranscripts: true,
     includePostAnalysis: true,
@@ -177,6 +196,16 @@ export async function getCall(agentId: string, callId: string): Promise<Call | n
     call.transcript = parseTranscript(transcriptRaw);
   }
   return call;
+}
+
+/** Fetch a single call with transcript + post-analysis included. */
+export async function getCall(agentId: string, callId: string): Promise<Call | null> {
+  const cached = unstable_cache(
+    async () => getCallUncached(agentId, callId),
+    ["trillet-call-detail", agentId, callId],
+    { revalidate: DETAIL_CACHE_SECONDS, tags: ["trillet-calls", `trillet-calls-${agentId}`] },
+  );
+  return cached();
 }
 
 /** Attempt to parse Trillet's transcript column into role/text pairs. */

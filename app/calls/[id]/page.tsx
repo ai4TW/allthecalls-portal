@@ -5,6 +5,7 @@ import { getCall } from "@/lib/trillet";
 import { getNote } from "@/lib/notes";
 import Nav from "@/components/Nav";
 import NotesForm from "@/components/NotesForm";
+import AutoRefresh from "@/components/AutoRefresh";
 import { formatDateTime, formatDuration, formatPhone, statusColor } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -36,9 +37,12 @@ export default async function CallDetailPage({
     <>
       <Nav session={session} />
       <main className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-12">
-        <Link href="/calls" className="mb-4 inline-flex items-center gap-1 text-sm text-ink-dim hover:text-accent-cyan">
-          ← All calls
-        </Link>
+        <div className="mb-4 flex items-center justify-between">
+          <Link href="/calls" className="inline-flex items-center gap-1 text-sm text-ink-dim hover:text-accent-cyan">
+            ← All calls
+          </Link>
+          <AutoRefresh intervalMs={10000} />
+        </div>
 
         <div className="card p-6 md:p-8">
           <div className="flex flex-wrap items-start justify-between gap-3">

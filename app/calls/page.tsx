@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { listCallsForAgent } from "@/lib/trillet";
 import Nav from "@/components/Nav";
 import CallList from "@/components/CallList";
+import AutoRefresh from "@/components/AutoRefresh";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -25,7 +26,10 @@ export default async function CallsPage() {
       <main className="mx-auto max-w-5xl px-4 py-8 md:px-6 md:py-12">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="font-display text-2xl font-semibold text-ink md:text-3xl">All Calls</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="font-display text-2xl font-semibold text-ink md:text-3xl">All Calls</h1>
+              <AutoRefresh intervalMs={8000} />
+            </div>
             <p className="mt-1 text-sm text-ink-dim">
               {calls.length} call{calls.length === 1 ? "" : "s"} for {session.name}
             </p>
