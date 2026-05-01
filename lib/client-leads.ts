@@ -195,6 +195,114 @@ export async function addTenantNote(
   if (error) throw error;
 }
 
+export interface CallIngestInput {
+  callerName?: string;
+  phone: string;
+  summary?: string;
+  transcript?: string;
+  recordingUrl?: string;
+  duration?: number;
+  agentId?: string;
+  callId?: string;
+  direction: "inbound" | "outbound";
+  metadata?: Record<string, unknown>;
+}
+
+export interface CallIngestResult {
+  ok: boolean;
+  leadId: string | null;
+  wasNew: boolean;
+  reason?: string;
+}
+
+/**
+ * Upsert a lead from a Trillet call event and append a call activity row
+ * to the lead's timeline. Uses the existing `upsert_lead` RPC for idempotent
+ * dedupe-by-phone, then adds a call_inbound / call_outbound activity record.
+ */
+export async function ingestCall(
+  tenant: Tenant,
+  input: CallIngestInput,
+): Promise<CallIngestResult> {
+  const sb = tenantClient(tenant);
+  if (!sb) return { ok: false, leadId: null, wasNew: false, reason: "tenant-supabase-not-configured" };
+
+  const phone = input.phone?.trim();
+  if (!phone) return { ok: false, leadId: null, wasNew: false, reason: "no-phone" };
+
+  const sourceDetail = input.agentId ? `trillet:${input.agentId}` : "trillet";
+
+  // 1. Upsert the lead (creates if new, returns existing if phone already in DB)
+  let leadId: string | null = null;
+  let wasNew = false;
+  try {
+    const { data, error } = await sb.rpc("upsert_lead", {
+      p_source: input.direction === "outbound" ? "phone" : "phone",
+      p_name: input.callerName || "Unknown caller",
+      p_phone: phone,
+      p_email: null,
+      p_address: null,
+      p_city: null,
+      p_state: null,
+      p_zip: null,
+      p_source_detail: sourceDetail,
+      p_raw_payload: {
+        call_id: input.callId,
+        agent_id: input.agentId,
+        recording_url: input.recordingUrl,
+        duration: input.duration,
+        metadata: input.metadata ?? {},
+      },
+    });
+    if (error) throw error;
+    if (Array.isArray(data) && data.length > 0) {
+      const row = data[0] as { lead_id: string; was_new: boolean };
+      leadId = row.lead_id;
+      wasNew = row.was_new;
+    }
+  } catch (e) {
+    return { ok: false, leadId: null, wasNew: false, reason: (e as Error).message };
+  }
+
+  if (!leadId) return { ok: false, leadId: null, wasNew, reason: "no-lead-id-returned" };
+
+  // 2. Insert a call activity row with the summary + transcript.
+  const activityType = input.direction === "outbound" ? "call_outbound" : "call_inbound";
+  const lines: string[] = [];
+  if (input.summary) lines.push(`Summary: ${input.summary}`);
+  if (typeof input.duration === "number") lines.push(`Duration: ${input.duration}s`);
+  if (input.recordingUrl) lines.push(`Recording: ${input.recordingUrl}`);
+  if (input.transcript) lines.push("", "Transcript:", input.transcript);
+  const content = lines.join("\n");
+
+  try {
+    await sb.from("activity").insert({
+      lead_id: leadId,
+      type: activityType,
+      author: "trillet",
+      content,
+      meta: {
+        call_id: input.callId,
+        agent_id: input.agentId,
+        recording_url: input.recordingUrl,
+        duration: input.duration,
+        direction: input.direction,
+      },
+    });
+  } catch (e) {
+    return { ok: true, leadId, wasNew, reason: `activity-insert-failed: ${(e as Error).message}` };
+  }
+
+  // 3. Bump last_contacted_at so the lead surfaces in "recent activity" views.
+  try {
+    await sb.from("leads").update({ last_contacted_at: new Date().toISOString() }).eq("id", leadId);
+  } catch {
+    // non-fatal
+  }
+
+  return { ok: true, leadId, wasNew };
+}
+
 export function formatTimeAgo(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const m = Math.floor(ms / 60000);

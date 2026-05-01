@@ -16,7 +16,7 @@ export interface Tenant {
   publicSiteUrl: string;             // Their marketing site
   supabaseUrl: string;               // Tenant's Supabase project URL
   supabaseServiceRoleKeyEnv: string; // Name of env var holding the service-role key
-  agentId?: string;                  // Trillet agent (links to call history view)
+  trilletAgentId?: string;           // Trillet agent — used to route inbound webhooks to this tenant
 }
 
 export const TENANTS: Tenant[] = [
@@ -29,9 +29,21 @@ export const TENANTS: Tenant[] = [
     publicSiteUrl: "https://webuyhousescolumbia.co",
     supabaseUrl: "https://amvaplgwteeoxyutcegk.supabase.co",
     supabaseServiceRoleKeyEnv: "WBHC_SUPABASE_SERVICE_ROLE_KEY",
+    trilletAgentId: process.env.WBHC_TRILLET_AGENT_ID,
   },
 ];
 
 export function findTenant(slug: string): Tenant | undefined {
   return TENANTS.find((t) => t.slug.toLowerCase() === slug.toLowerCase());
+}
+
+export function findTenantByAgentId(agentId: string): Tenant | undefined {
+  if (!agentId) return undefined;
+  return TENANTS.find((t) => t.trilletAgentId && t.trilletAgentId === agentId);
+}
+
+export function findTenantByMetadata(meta: Record<string, string> | undefined): Tenant | undefined {
+  const slug = meta?.tenant_slug || meta?.tenantSlug;
+  if (slug) return findTenant(slug);
+  return undefined;
 }
