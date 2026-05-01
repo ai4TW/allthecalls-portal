@@ -34,10 +34,6 @@ export default async function TenantLayout({
                 src={tenant.logoUrl}
                 alt={tenant.name}
                 className="h-10 w-10 object-contain"
-                onError={(e) => {
-                  // Fallback if logo missing — show a letter
-                  (e.currentTarget.style.display = "none");
-                }}
               />
             </div>
             <div>
