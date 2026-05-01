@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC = ["/login", "/access", "/admin/login", "/api/login", "/api/admin/login"];
+const PUBLIC = ["/login", "/access", "/admin/login", "/api/login", "/api/admin/login", "/api/webhooks"];
 const ADMIN = ["/admin", "/api/admin"];
 
 export function middleware(req: NextRequest) {
