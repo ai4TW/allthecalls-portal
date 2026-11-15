@@ -17,6 +17,7 @@ export interface Tenant {
   supabaseUrl: string;               // Tenant's Supabase project URL
   supabaseServiceRoleKeyEnv: string; // Name of env var holding the service-role key
   trilletAgentId?: string;           // Trillet agent — used to route inbound webhooks to this tenant
+  vertical?: "real_estate" | "trades"; // Changes Inbox field labels (seller/property vs. customer/job)
 }
 
 export const TENANTS: Tenant[] = [
@@ -30,6 +31,36 @@ export const TENANTS: Tenant[] = [
     supabaseUrl: "https://amvaplgwteeoxyutcegk.supabase.co",
     supabaseServiceRoleKeyEnv: "WBHC_SUPABASE_SERVICE_ROLE_KEY",
     trilletAgentId: process.env.WBHC_TRILLET_AGENT_ID,
+    vertical: "real_estate",
+  },
+  // --- AllTheCalls DFY clients (added 2026-11-14, consolidation proof) ---
+  // No *_SUPABASE_SERVICE_ROLE_KEY set for these yet on purpose: the Inbox
+  // falls back to realistic sample data automatically (see
+  // lib/client-leads.ts `fetchTenantLeads`), proving the white-label
+  // architecture without touching any real client database. Give each its
+  // own Supabase project (same isolation model as WBHC above) before
+  // onboarding either for real — see the PR description's migration plan.
+  {
+    slug: "drainiacs",
+    name: "Drainiacs Plumbing of Wichita",
+    brand: "#B5452B", // brick
+    primary: "#0E6E62", // jade
+    logoUrl: "/tenants/drainiacs.svg",
+    publicSiteUrl: "https://drainiacs-plumbing-wichita.vercel.app",
+    supabaseUrl: "https://amvaplgwteeoxyutcegk.supabase.co",
+    supabaseServiceRoleKeyEnv: "DRAINIACS_SUPABASE_SERVICE_ROLE_KEY",
+    vertical: "trades",
+  },
+  {
+    slug: "legends",
+    name: "Legends Barber College",
+    brand: "#B8894D", // brass
+    primary: "#211D1A", // charcoal
+    logoUrl: "/tenants/legends.svg",
+    publicSiteUrl: "https://legends-barber-college.vercel.app",
+    supabaseUrl: "https://amvaplgwteeoxyutcegk.supabase.co",
+    supabaseServiceRoleKeyEnv: "LEGENDS_SUPABASE_SERVICE_ROLE_KEY",
+    vertical: "trades",
   },
 ];
 

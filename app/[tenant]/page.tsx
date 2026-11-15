@@ -23,6 +23,10 @@ export default async function TenantInboxPage({
   if (!tenant) notFound();
 
   const { leads, isSample } = await fetchTenantLeads(tenant);
+  const isTrades = tenant.vertical === "trades";
+  const customerLabel = isTrades ? "Customer" : "Seller";
+  const addressLabel = isTrades ? "Job Address" : "Property";
+  const offersLabel = isTrades ? "Open quotes" : "Active offers";
 
   const newCount = leads.filter((l) => l.status === "new").length;
   const dueToday = leads.filter((l) => {
@@ -55,13 +59,13 @@ export default async function TenantInboxPage({
         <Stat label="New" value={String(newCount)} accent="#0EA5E9" />
         <Stat label="Due in 24h" value={String(dueToday)} accent="#F59E0B" />
         <Stat label="In pipeline" value={String(inFlight)} accent="#10B981" />
-        <Stat label="Active offers" value={formatMoney(sumOffers)} accent={tenant.brand} />
+        <Stat label={offersLabel} value={formatMoney(sumOffers)} accent={tenant.brand} />
       </div>
 
       <section className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
         <div className="grid grid-cols-[1.2fr_1fr_130px_110px_110px] border-b border-neutral-200 bg-neutral-50 px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-500 max-md:hidden">
-          <div>Seller</div>
-          <div>Property</div>
+          <div>{customerLabel}</div>
+          <div>{addressLabel}</div>
           <div>Status</div>
           <div>Source</div>
           <div className="text-right">When</div>
